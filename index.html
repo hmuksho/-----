@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الألعاب الثنائية - التحكم بالأسهم فقط</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #38bdf8;
+            margin-bottom: 10px;
+        }
+
+        .gamepad-status {
+            background-color: #334155;
+            color: #facc15;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        /* Nav Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background-color: #1e293b;
+            color: #f8fafc;
+            border: 2px solid #334155;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border-color: #38bdf8;
+        }
+
+        /* Game Container */
+        .game-card {
+            background-color: #1e293b;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .game-card.active {
+            display: flex;
+        }
+
+        .controls-info {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            width: 100%;
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .status {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            min-height: 30px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .p1-color { color: #22c55e; }
+        .p2-color { color: #3b82f6; }
+
+        .action-btn {
+            background-color: #22c55e;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* --- XO Styles --- */
+        .xo-board {
+            display: grid;
+            grid-template-columns: repeat(3, 90px);
+            grid-template-rows: repeat(3, 90px);
+            gap: 8px;
+        }
+
+        .xo-cell {
+            background-color: #0f172a;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .xo-cell.selected {
+            border: 3px solid #facc15;
+        }
+        .xo-cell.x { color: #ef4444; }
+        .xo-cell.o { color: #3b82f6; }
+
+        /* --- Canvas Styles (Snake & Pong) --- */
+        canvas {
+            background-color: #0f172a;
+            border-radius: 8px;
+            border: 2px solid #334155;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎮 منصة الألعاب الثنائية</h1>
+    <div class="gamepad-status" id="gamepad-status">🎮 التحكم في أذرع اللعب مقتصر على الأسهم فقط (D-Pad)</div>
+
+    <!-- Game Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchGame('xo')">إكس أو (XO)</button>
+        <button class="tab-btn" onclick="switchGame('snake')">الثعبان</button>
+        <button class="tab-btn" onclick="switchGame('pong')">بينج بونج</button>
+    </div>
+
+    <!-- 1. XO Game -->
+    <div id="xo-game" class="game-card active">
+        <div class="controls-info">التحكم: أسهم الذراع للتنقل + زر A/X للاختيار (أو الفأرة)</div>
+        <div class="status" id="xo-status">اضغط "بدء اللعبة" للعب</div>
+        <div class="xo-board" id="xo-board">
+            <div class="xo-cell selected" data-index="0"></div>
+            <div class="xo-cell" data-index="1"></div>
+            <div class="xo-cell" data-index="2"></div>
+            <div class="xo-cell" data-index="3"></div>
+            <div class="xo-cell" data-index="4"></div>
+            <div class="xo-cell" data-index="5"></div>
+            <div class="xo-cell" data-index="6"></div>
+            <div class="xo-cell" data-index="7"></div>
+            <div class="xo-cell" data-index="8"></div>
+        </div>
+        <button class="action-btn" id="xo-start-btn" onclick="startXO()">بدء اللعبة</button>
+    </div>
+
+    <!-- 2. Snake Game -->
+    <div id="snake-game" class="game-card">
+        <div class="controls-info">
+            لاعب 1 (أخضر): الأسهم / أسهم الذراع 1 (D-Pad)<br>
+            لاعب 2 (أزرق): أزرار WASD / أسهم الذراع 2 (D-Pad)
+        </div>
+        <div class="score-board">
+            <span class="p1-color">لاعب 1: <span id="snake-p1-score">0</span></span>
+            <span class="p2-color">لاعب 2: <span id="snake-p2-score">0</span></span>
+        </div>
+        <div class="status" id="snake-status">الهدف: الوصول لـ 10 نقاط أولاً!</div>
+        <canvas id="snakeCanvas" width="300" height="300"></canvas>
+        <button class="action-btn" id="snake-start-btn" onclick="startSnake()">بدء اللعبة</button>
+    </div>
+
+    <!-- 3. Pong Game -->
+    <div id="pong-game" class="game-card">
+        <div class="controls-info">
+            اللاعب الأيسر: W/S أو أسهم الذراع 1 (أعلى/أسفل)<br>
+            اللاعب الأيمن: الأسهم أو أسهم الذراع 2 (أعلى/أسفل)
+        </div>
+        <div class="status" id="pong-status">اضغط "بدء اللعبة" للعب</div>
+        <canvas id="pongCanvas" width="400" height="300"></canvas>
+        <button class="action-btn" id="pong-start-btn" onclick="startPong()">بدء اللعبة</button>
+    </div>
+
+    <script>
+        // --- GAMEPAD LOGIC ---
+        let gamepads = {};
+
+        window.addEventListener("gamepadconnected", (e) => {
+            gamepads[e.gamepad.index] = e.gamepad;
+            document.getElementById('gamepad-status').textContent = `✅ تم إيصال ذراع التحكم (التحكم بالأسهم فقط): ${e.gamepad.id.substring(0, 20)}...`;
+        });
+
+        window.addEventListener("gamepaddisconnected", (e) => {
+            delete gamepads[e.gamepad.index];
+            document.getElementById('gamepad-status').textContent = "🎮 التحكم في أذرع اللعب مقتصر على الأسهم فقط (D-Pad)";
+        });
+
+        function pollGamepads() {
+            const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+            for (let i = 0; i < gps.length; i++) {
+                if (gps[i]) {
+                    gamepads[gps[i].index] = gps[i];
+                }
+            }
+        }
+
+        // --- Tab Switching ---
+        function switchGame(gameName) {
+            document.querySelectorAll('.game-card').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`${gameName}-game`).classList.add('active');
+            event.target.classList.add('active');
+            
+            stopAllGames();
+        }
+
+        function stopAllGames() {
+            xoRunning = false;
+            clearInterval(snakeInterval);
+            clearInterval(pongInterval);
+        }
+
+        // ==========================================
+        // 1. XO GAME LOGIC
+        // ==========================================
+        let xoBoard = ["", "", "", "", "", "", "", "", ""];
+        let xoPlayer = "X";
+        let xoRunning = false;
+        let xoCursor = 0;
+        let lastBtnPress = 0;
+        const xoWinConds = [
+            [0,1,2], [3,4,5], [6,7,8],
+            [0,3,6], [1,4,7], [2,5,8],
+            [0,4,8], [2,4,6]
+        ];
+
+        function updateXOCursor() {
+            document.querySelectorAll('.xo-cell').forEach((c, idx) => {
+                if(idx === xoCursor) c.classList.add('selected');
+                else c.classList.remove('selected');
+            });
+        }
+
+        function playXOCell(idx) {
+            if(!xoRunning || xoBoard[idx] !== "") return;
+
+            xoBoard[idx] = xoPlayer;
+            const cell = document.querySelectorAll('.xo-cell')[idx];
+            cell.textContent = xoPlayer;
+            cell.classList.add(xoPlayer.toLowerCase());
+
+            if(checkXOWin()) {
+                document.getElementById('xo-status').textContent = `🎉 الفائز هو: ${xoPlayer}`;
+                xoRunning = false;
+                document.getElementById('xo-start-btn').textContent = "إعادة التشغيل";
+            } else if(!xoBoard.includes("")) {
+                document.getElementById('xo-status').textContent = "تعادل! 🤝";
+                xoRunning = false;
+                document.getElementById('xo-start-btn').textContent = "إعادة التشغيل";
+            } else {
+                xoPlayer = xoPlayer === "X" ? "O" : "X";
+                document.getElementById('xo-status').textContent = `دور اللاعب: ${xoPlayer}`;
+            }
+        }
+
+        document.querySelectorAll('.xo-cell').forEach(cell => {
+            cell.addEventListener('click', function() {
+                const idx = parseInt(this.getAttribute('data-index'));
+                xoCursor = idx;
+                updateXOCursor();
+                playXOCell(idx);
+            });
+        });
+
+        function startXO() {
+            xoBoard = ["", "", "", "", "", "", "", "", ""];
+            xoPlayer = "X";
+            xoRunning = true;
+            xoCursor = 0;
+            updateXOCursor();
+            document.querySelectorAll('.xo-cell').forEach(c => {
+                c.textContent = "";
+                c.classList.remove('x', 'o');
+            });
+            document.getElementById('xo-status').textContent = "دور اللاعب: X";
+            document.getElementById('xo-start-btn').textContent = "إعادة التشغيل";
+        }
+
+        function checkXOWin() {
+            return xoWinConds.some(cond => cond.every(idx => xoBoard[idx] === xoPlayer));
+        }
+
+        // ==========================================
+        // 2. SNAKE 2-PLAYER LOGIC
+        // ==========================================
+        const sCanvas = document.getElementById('snakeCanvas');
+        const sCtx = sCanvas.getContext('2d');
+        const grid = 15;
+        let snakeInterval = null;
+        let p1, p2, food;
+
+        function startSnake() {
+            clearInterval(snakeInterval);
+            p1 = { x: 45, y: 150, dx: grid, dy: 0, body: [], score: 0, color: '#22c55e' };
+            p2 = { x: 255, y: 150, dx: -grid, dy: 0, body: [], score: 0, color: '#3b82f6' };
+            food = { x: 150, y: 150 };
+            
+            document.getElementById('snake-p1-score').textContent = "0";
+            document.getElementById('snake-p2-score').textContent = "0";
+            document.getElementById('snake-status').textContent = "اللعبة شغالة الآن! أجمع 10 نقاط للفوز!";
+            document.getElementById('snake-start-btn').textContent = "إعادة التشغيل";
+
+            snakeInterval = setInterval(updateSnake, 120);
+        }
+
+        function updateSnake() {
+            handleGamepadInputs();
+
+            // Move P1
+            p1.x += p1.dx; p1.y += p1.dy;
+            p1.body.unshift({x: p1.x, y: p1.y});
+            
+            if (p1.x === food.x && p1.y === food.y) {
+                p1.score++;
+                document.getElementById('snake-p1-score').textContent = p1.score;
+                spawnFood();
+            } else {
+                p1.body.pop();
+            }
+
+            // Move P2
+            p2.x += p2.dx; p2.y += p2.dy;
+            p2.body.unshift({x: p2.x, y: p2.y});
+
+            if (p2.x === food.x && p2.y === food.y) {
+                p2.score++;
+                document.getElementById('snake-p2-score').textContent = p2.score;
+                spawnFood();
+            } else {
+                p2.body.pop();
+            }
+
+            // Check Win Condition (10 points)
+            if (p1.score >= 10) {
+                endSnakeGame("لاعب 1 هو الفائز! 🎉", "لاعب 2 الخسران: هيا اعزمها على شيء! 🍕🧃");
+                return;
+            }
+            if (p2.score >= 10) {
+                endSnakeGame("لاعب 2 هو الفائز! 🎉", "لاعب 1 الخسران: هيا اعزمها على شيء! 🍕🧃");
+                return;
+            }
+
+            // Collisions
+            if (checkSnakeCollision(p1)) {
+                endSnakeGame("لاعب 1 اصطدم بالخارطة!", "لاعب 2 فاز بالخطأ! لاعب 1 اعزمها على شيء 😅");
+                return;
+            }
+            if (checkSnakeCollision(p2)) {
+                endSnakeGame("لاعب 2 اصطدم بالخارطة!", "لاعب 1 فاز بالخطأ! لاعب 2 اعزمها على شيء 😅");
+                return;
+            }
+
+            // Draw
+            sCtx.fillStyle = '#0f172a';
+            sCtx.fillRect(0, 0, sCanvas.width, sCanvas.height);
+
+            sCtx.fillStyle = '#ef4444';
+            sCtx.fillRect(food.x, food.y, grid-1, grid-1);
+
+            drawSnakeBody(p1);
+            drawSnakeBody(p2);
+        }
+
+        function spawnFood() {
+            food = {
+                x: Math.floor(Math.random() * (sCanvas.width / grid)) * grid,
+                y: Math.floor(Math.random() * (sCanvas.height / grid)) * grid
+            };
+        }
+
+        function endSnakeGame(winnerMsg, loserMsg) {
+            clearInterval(snakeInterval);
+            document.getElementById('snake-status').innerHTML = `${winnerMsg}<br><span style="color:#f59e0b; font-size:0.95rem;">${loserMsg}</span>`;
+            document.getElementById('snake-start-btn').textContent = "إعادة التشغيل";
+        }
+
+        function drawSnakeBody(p) {
+            sCtx.fillStyle = p.color;
+            p.body.forEach(part => sCtx.fillRect(part.x, part.y, grid-1, grid-1));
+        }
+
+        function checkSnakeCollision(p) {
+            if (p.x < 0 || p.x >= sCanvas.width || p.y < 0 || p.y >= sCanvas.height) return true;
+            for (let i = 1; i < p.body.length; i++) {
+                if (p.x === p.body[i].x && p.y === p.body[i].y) return true;
+            }
+            return false;
+        }
+
+        // Keyboard Controls Snake
+        document.addEventListener('keydown', e => {
+            if(e.key === 'ArrowUp' && p1.dy === 0) { p1.dx = 0; p1.dy = -grid; }
+            if(e.key === 'ArrowDown' && p1.dy === 0) { p1.dx = 0; p1.dy = grid; }
+            if(e.key === 'ArrowLeft' && p1.dx === 0) { p1.dx = -grid; p1.dy = 0; }
+            if(e.key === 'ArrowRight' && p1.dx === 0) { p1.dx = grid; p1.dy = 0; }
+
+            if((e.key === 'w' || e.key === 'W') && p2.dy === 0) { p2.dx = 0; p2.dy = -grid; }
+            if((e.key === 's' || e.key === 'S') && p2.dy === 0) { p2.dx = 0; p2.dy = grid; }
+            if((e.key === 'a' || e.key === 'A') && p2.dx === 0) { p2.dx = -grid; p2.dy = 0; }
+            if((e.key === 'd' || e.key === 'D') && p2.dx === 0) { p2.dx = grid; p2.dy = 0; }
+        });
+
+        // ==========================================
+        // 3. PONG 2-PLAYER LOGIC
+        // ==========================================
+        const pCanvas = document.getElementById('pongCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        let pongInterval = null;
+        let ball, paddle1, paddle2, keys = {};
+
+        function startPong() {
+            clearInterval(pongInterval);
+            ball = { x: 200, y: 150, dx: 3, dy: 3, radius: 6 };
+            paddle1 = { x: 10, y: 110, w: 10, h: 80, score: 0 };
+            paddle2 = { x: 380, y: 110, w: 10, h: 80, score: 0 };
+
+            document.getElementById('pong-status').textContent = "النتيجة: 0 - 0";
+            document.getElementById('pong-start-btn').textContent = "إعادة التشغيل";
+
+            pongInterval = setInterval(updatePong, 1000/60);
+        }
+
+        function updatePong() {
+            handleGamepadInputs();
+
+            if(keys['w'] || keys['W']) paddle1.y = Math.max(0, paddle1.y - 5);
+            if(keys['s'] || keys['S']) paddle1.y = Math.min(pCanvas.height - paddle1.h, paddle1.y + 5);
+            if(keys['ArrowUp']) paddle2.y = Math.max(0, paddle2.y - 5);
+            if(keys['ArrowDown']) paddle2.y = Math.min(pCanvas.height - paddle2.h, paddle2.y + 5);
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            if(ball.y <= 0 || ball.y >= pCanvas.height) ball.dy *= -1;
+
+            if(ball.x < paddle1.x + paddle1.w && ball.y > paddle1.y && ball.y < paddle1.y + paddle1.h) ball.dx *= -1;
+            if(ball.x > paddle2.x - paddle2.w && ball.y > paddle2.y && ball.y < paddle2.y + paddle2.h) ball.dx *= -1;
+
+            if(ball.x < 0) { paddle2.score++; resetPongBall(); }
+            if(ball.x > pCanvas.width) { paddle1.score++; resetPongBall(); }
+
+            document.getElementById('pong-status').textContent = `النتيجة: ${paddle1.score} - ${paddle2.score}`;
+
+            pCtx.fillStyle = '#0f172a';
+            pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+
+            pCtx.fillStyle = '#ef4444';
+            pCtx.fillRect(paddle1.x, paddle1.y, paddle1.w, paddle1.h);
+
+            pCtx.fillStyle = '#3b82f6';
+            pCtx.fillRect(paddle2.x, paddle2.y, paddle2.w, paddle2.h);
+
+            pCtx.fillStyle = '#f8fafc';
+            pCtx.beginPath();
+            pCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            pCtx.fill();
+        }
+
+        function resetPongBall() {
+            ball.x = 200;
+            ball.y = 150;
+            ball.dx *= -1;
+        }
+
+        document.addEventListener('keydown', e => keys[e.key] = true);
+        document.addEventListener('keyup', e => keys[e.key] = false);
+
+        // ==========================================
+        // GAMEPAD POLLING LOOP (D-PAD ONLY)
+        // ==========================================
+        function handleGamepadInputs() {
+            pollGamepads();
+            const now = Date.now();
+
+            // GP 0 (Player 1)
+            if (gamepads[0]) {
+                const gp = gamepads[0];
+                const dUp = gp.buttons[12]?.pressed;
+                const dDown = gp.buttons[13]?.pressed;
+                const dLeft = gp.buttons[14]?.pressed;
+                const dRight = gp.buttons[15]?.pressed;
+
+                // Snake P1
+                if (p1) {
+                    if (dUp && p1.dy === 0) { p1.dx = 0; p1.dy = -grid; }
+                    if (dDown && p1.dy === 0) { p1.dx = 0; p1.dy = grid; }
+                    if (dLeft && p1.dx === 0) { p1.dx = -grid; p1.dy = 0; }
+                    if (dRight && p1.dx === 0) { p1.dx = grid; p1.dy = 0; }
+                }
+
+                // Pong P1
+                if (paddle1) {
+                    if (dUp) paddle1.y = Math.max(0, paddle1.y - 5);
+                    if (dDown) paddle1.y = Math.min(pCanvas.height - paddle1.h, paddle1.y + 5);
+                }
+
+                // XO Gamepad Cursor (D-Pad Arrows Only)
+                if (document.getElementById('xo-game').classList.contains('active') && now - lastBtnPress > 180) {
+                    if (dRight) { xoCursor = (xoCursor + 1) % 9; updateXOCursor(); lastBtnPress = now; }
+                    if (dLeft) { xoCursor = (xoCursor - 1 + 9) % 9; updateXOCursor(); lastBtnPress = now; }
+                    if (dDown) { xoCursor = (xoCursor + 3) % 9; updateXOCursor(); lastBtnPress = now; }
+                    if (dUp) { xoCursor = (xoCursor - 3 + 9) % 9; updateXOCursor(); lastBtnPress = now; }
+                    if (gp.buttons[0]?.pressed) { playXOCell(xoCursor); lastBtnPress = now; }
+                }
+            }
+
+            // GP 1 (Player 2)
+            if (gamepads[1]) {
+                const gp = gamepads[1];
+                const dUp = gp.buttons[12]?.pressed;
+                const dDown = gp.buttons[13]?.pressed;
+                const dLeft = gp.buttons[14]?.pressed;
+                const dRight = gp.buttons[15]?.pressed;
+
+                // Snake P2
+                if (p2) {
+                    if (dUp && p2.dy === 0) { p2.dx = 0; p2.dy = -grid; }
+                    if (dDown && p2.dy === 0) { p2.dx = 0; p2.dy = grid; }
+                    if (dLeft && p2.dx === 0) { p2.dx = -grid; p2.dy = 0; }
+                    if (dRight && p2.dx === 0) { p2.dx = grid; p2.dy = 0; }
+                }
+
+                // Pong P2
+                if (paddle2) {
+                    if (dUp) paddle2.y = Math.max(0, paddle2.y - 5);
+                    if (dDown) paddle2.y = Math.min(pCanvas.height - paddle2.h, paddle2.y + 5);
+                }
+            }
+        }
+
+        // Continuously check gamepads
+        setInterval(handleGamepadInputs, 50);
+    </script>
+</body>
+</html>
